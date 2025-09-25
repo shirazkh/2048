@@ -17,7 +17,7 @@ public class Tile : MonoBehaviour
         text = GetComponentInChildren<TextMeshProUGUI>();
     }
 
-    public void SetState(TileState state , int number)
+    public void SetState(TileState state, int number)
     {
         this.state = state;
         this.number = number;
@@ -25,5 +25,31 @@ public class Tile : MonoBehaviour
         background.color = state.backgroundColor;
         text.color = state.textColor;
         text.text = number.ToString();
+    }
+
+    public void Spawn(TileCell cell)
+    {
+        if (this.cell != null)
+        {
+            this.cell.tile = null;
+        }
+
+        this.cell = cell;
+        this.cell.tile = this;
+
+        transform.position = cell.transform.position;
+    }
+    
+    public void MoveTo(TileCell cell)
+    {
+        if (this.cell != null)
+        {
+            this.cell.tile = null;
+        }
+
+        this.cell = cell;
+        this.cell.tile = this;
+
+        transform.position = cell.transform.position;
     }
 }
