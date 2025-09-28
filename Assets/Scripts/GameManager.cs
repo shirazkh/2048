@@ -3,9 +3,8 @@ using TMPro;
 using UnityEngine;
 
 [DefaultExecutionOrder(-1)]
-public class GameManager : MonoBehaviour
+public class GameManager : Singleton<GameManager>
 {
-    public static GameManager Instance { get; private set; }
 
     [SerializeField] private TileBoard board;
     [SerializeField] private CanvasGroup gameOver;
@@ -13,23 +12,6 @@ public class GameManager : MonoBehaviour
     [SerializeField] private TextMeshProUGUI hiscoreText;
 
     public int score { get; private set; } = 0;
-
-    private void Awake()
-    {
-        if (Instance != null) {
-            DestroyImmediate(gameObject);
-        } else {
-            Instance = this;
-        }
-    }
-
-    private void OnDestroy()
-    {
-        if (Instance == this) {
-            Instance = null;
-        }
-    }
-
     private void Start()
     {
         NewGame();
