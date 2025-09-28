@@ -1,90 +1,69 @@
-using System.Collections;
-using TMPro;
+using System;
 using UnityEngine;
 
-[DefaultExecutionOrder(-1)]
+[DefaultExecutionOrder(-1)] // ensure manager is initialized before other scene scripts
 public class GameManager : Singleton<GameManager>
 {
+    [SerializeField] private TileBoard board; // gameplay entry point
 
-    [SerializeField] private TileBoard board;
-    [SerializeField] private CanvasGroup gameOver;
-    [SerializeField] private TextMeshProUGUI scoreText;
-    [SerializeField] private TextMeshProUGUI hiscoreText;
+    public int Score { get; private set; }        // current run score
+    public int HighScore { get; private set; }    // persisted best
+    public bool GameStarted { get; private set; } // gates input/UI
+    public bool GameOverFlag { get; private set; }
 
-    public int score { get; private set; } = 0;
+    // UI listens to these; GM never touches UI components directly
+    public event Action<int> OnScoreChanged;
+    public event Action<int> OnHighScoreChanged;
+    public event Action OnGameStarted;
+    public event Action OnGameOver;
+
     private void Start()
     {
-        NewGame();
+        // Load persisted high score and notify UI once
+        HighScore = PlayerPrefs.GetInt(Constants.HighScoreKey, 0);
+        OnHighScoreChanged?.Invoke(HighScore);
+
+        NewGame(); // auto-start
     }
 
     public void NewGame()
     {
-        // reset score
-        SetScore(0);
-        hiscoreText.text = LoadHiscore().ToString();
+        GameStarted = true;
+        GameOverFlag = false;
 
-        // hide game over screen
-        gameOver.alpha = 0f;
-        gameOver.interactable = false;
+        SetScore(0);           // reset and notify UI
+        OnGameStarted?.Invoke();
 
-        // update board state
-        board.ClearBoard();
+        board.ClearBoard();    // wipe tiles 
+        board.CreateTile();    // first two tiles
         board.CreateTile();
-        board.CreateTile();
-        board.enabled = true;
+        board.enabled = true;  // allow input
     }
 
-    public void GameOver()
+    public void IncreaseScore(int points) // called from merges
     {
-        board.enabled = false;
-        gameOver.interactable = true;
-
-        StartCoroutine(Fade(gameOver, 1f, 1f));
+        SetScore(Score + points);
     }
 
-    private IEnumerator Fade(CanvasGroup canvasGroup, float to, float delay = 0f)
+    public void GameOver() // called when no moves left
     {
-        yield return new WaitForSeconds(delay);
+        board.enabled = false; // freeze board updates
+        GameOverFlag = true;
+        OnGameOver?.Invoke();  // UI overlay / retry button reacts
+    }
 
-        float elapsed = 0f;
-        float duration = 0.5f;
-        float from = canvasGroup.alpha;
+    // Central score setter: fires events + persists high score
+    private void SetScore(int value)
+    {
+        Score = value;
+        OnScoreChanged?.Invoke(Score);
 
-        while (elapsed < duration)
+        if (Score > HighScore)
         {
-            canvasGroup.alpha = Mathf.Lerp(from, to, elapsed / duration);
-            elapsed += Time.deltaTime;
-            yield return null;
-        }
-
-        canvasGroup.alpha = to;
-    }
-
-    public void IncreaseScore(int points)
-    {
-        SetScore(score + points);
-    }
-
-    private void SetScore(int score)
-    {
-        this.score = score;
-        scoreText.text = score.ToString();
-
-        SaveHiscore();
-    }
-
-    private void SaveHiscore()
-    {
-        int hiscore = LoadHiscore();
-
-        if (score > hiscore) {
-            PlayerPrefs.SetInt("hiscore", score);
+            HighScore = Score;
+            OnHighScoreChanged?.Invoke(HighScore);
+            PlayerPrefs.SetInt(Constants.HighScoreKey, HighScore); // persist
+            PlayerPrefs.Save();
         }
     }
-
-    private int LoadHiscore()
-    {
-        return PlayerPrefs.GetInt("hiscore", 0);
-    }
-
 }
